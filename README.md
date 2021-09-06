@@ -21,7 +21,7 @@ root/
 ```
 
 After running `consul-editor /root` your local editor (specified by 
-EDITOR environment variable) opens with this content:
+EDITOR environment variable) will be opened with this content:
 ```yaml
 root:
   a:
