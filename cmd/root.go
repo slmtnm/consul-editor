@@ -98,13 +98,9 @@ var rootCmd = &cobra.Command{
 			panic(err)
 		}
 
-		kvs, err := pkg.MapToKeys(yamlData)
+		_, err = pkg.MapToKeys(yamlData)
 		if err != nil {
 			panic(err)
-		}
-
-		for _, kv := range kvs {
-			fmt.Println(kv.Key, kv.Value)
 		}
 	},
 }
