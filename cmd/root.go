@@ -43,7 +43,7 @@ var rootCmd = &cobra.Command{
 			panic(err)
 		}
 
-		file, err := ioutil.TempFile("", "consul-editor")
+		file, err := ioutil.TempFile("", "consul-editor*.yaml")
 		if err != nil {
 			panic(err)
 		}
