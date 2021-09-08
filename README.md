@@ -11,6 +11,13 @@ To install consul-editor, run:
 ```
 Requires go 1.17 or higher.
 
+## Configuration
+
+Application is configured via standard consul environment variables:
+
+* **CONSUL_HTTP_ADDR** - HTTP address of consul host (default "localhost:9200")
+* **CONSUL_HTTP_TOKEN** - ACL Token
+
 ## Example
 Assume having following folder structure in Consul KV:
 ```
