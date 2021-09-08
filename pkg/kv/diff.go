@@ -3,6 +3,7 @@ package kv
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/fatih/color"
 	"github.com/hashicorp/consul/api"
@@ -155,45 +156,28 @@ func calculateDiffHelper(path string, oldMap, newMap map[string]interface{}) Dif
 }
 
 func (d Diff) Apply() {
-	errCh := make(chan error)
-	deleteCh := make(chan interface{}, len(d.removed))
-	addCh := make(chan interface{}, len(d.added))
-
+	var wg sync.WaitGroup
 	for k := range d.removed {
+		wg.Add(1)
 		go func(k string) {
-			_, err := kv.DeleteTree(k, nil)
-			if err != nil {
-				errCh <- err
+			if _, err := kv.DeleteTree(k, nil); err != nil {
+				panic(err)
 			}
 			fmt.Printf("Key %s deleted\n", k)
-			deleteCh <- nil
+			wg.Done()
 		}(k)
 	}
-	for i := 0; i < len(d.removed); i++ {
-		select {
-		case e := <-errCh:
-			panic(e)
-		case <-deleteCh:
-			continue
-		}
-	}
+	wg.Wait()
 
 	for k, v := range d.added {
+		wg.Add(1)
 		go func(k string, v string) {
-			_, err := kv.Put(&api.KVPair{Key: k, Value: []byte(v), Flags: 42}, nil)
-			if err != nil {
-				errCh <- err
+			if _, err := kv.Put(&api.KVPair{Key: k, Value: []byte(v), Flags: 42}, nil); err != nil {
+				panic(err)
 			}
 			fmt.Printf("Key %s added\n", k)
-			addCh <- nil
+			wg.Done()
 		}(k, v)
 	}
-	for i := 0; i < len(d.added); i++ {
-		select {
-		case e := <-errCh:
-			panic(e)
-		case <-addCh:
-			continue
-		}
-	}
+	wg.Wait()
 }
