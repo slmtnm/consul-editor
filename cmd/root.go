@@ -22,18 +22,32 @@ var rootCmd = &cobra.Command{
 	Short: `Edit your consul KV via local editor`,
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		keysMap, err := kv.GetKeys(args[0])
+		oldMap, err := kv.GetKeys(args[0])
 		handleError(err)
 
-		data, err := yaml.Marshal(keysMap)
+		data, err := yaml.Marshal(oldMap)
 		handleError(err)
 
 		newData, err := editor.Edit(data)
 		handleError(err)
 
-		yamlData := make(map[string]interface{})
-		err = yaml.Unmarshal(newData, yamlData)
+		if newData == nil {
+			fmt.Println("No changes, aboring...")
+			return
+		}
+
+		newMap := make(map[string]interface{})
+		err = yaml.Unmarshal(newData, newMap)
 		handleError(err)
+
+		diff := kv.CalculateDiff(oldMap, newMap)
+		diff.Print()
+
+		fmt.Print("Confirm changes? [y/n] ")
+		var answer string
+		for answer != "y" && answer != "n" {
+			fmt.Scan(&answer)
+		}
 	},
 }
 

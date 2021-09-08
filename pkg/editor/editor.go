@@ -2,7 +2,6 @@ package editor
 
 import (
 	"crypto/sha256"
-	"errors"
 	"io"
 	"io/ioutil"
 	"os"
@@ -48,7 +47,7 @@ func Edit(data []byte) ([]byte, error) {
 	}
 
 	if oldHash == sha256.Sum256(newData) {
-		return nil, errors.New("no changes")
+		newData = nil
 	}
 
 	return newData, nil
