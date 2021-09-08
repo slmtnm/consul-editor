@@ -1,7 +1,7 @@
 # consul-editor
 
 Utility for editing Consul KV storage via local editor. All folder 
-hierachy is nested in YAML format, so editing deep KV trees is made 
+hierachy is converted into YAML format, so editing deep KV trees is made 
 more convenient with this utility than same done via UI.
 
 ## Installation
