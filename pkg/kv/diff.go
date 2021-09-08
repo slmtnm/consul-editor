@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
@@ -159,11 +160,13 @@ func (d Diff) Apply() {
 		if err != nil {
 			panic(err)
 		}
+		fmt.Printf("Key %s deleted\n", k)
 	}
 	for k, v := range d.added {
 		_, err := kv.Put(&api.KVPair{Key: k, Value: []byte(v), Flags: 42}, nil)
 		if err != nil {
 			panic(err)
 		}
+		fmt.Printf("Key %s added\n", k)
 	}
 }
