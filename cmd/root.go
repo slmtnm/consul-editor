@@ -41,6 +41,7 @@ var rootCmd = &cobra.Command{
 		handleError(err)
 
 		diff := kv.CalculateDiff(oldMap, newMap)
+		fmt.Println("Your changes:")
 		diff.Print()
 
 		fmt.Print("Confirm changes? [y/n] ")
