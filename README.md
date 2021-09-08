@@ -5,11 +5,12 @@ hierachy is nested in YAML format, so editing deep KV trees is made
 more convenient with this utility than same done via UI.
 
 ## Installation
-To install consul-editor, run:
+To compile and install consul-editor, run:
 ```console
   $ go install github.com/slmtnm/consul-editor@latest
 ```
-Requires go 1.17 or higher.
+
+To download static binary, go to [Releases](https://github.com/slmtnm/consul-editor/releases) page.
 
 ## Configuration
 
