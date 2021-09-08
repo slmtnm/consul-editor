@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/hashicorp/consul/api"
 	"gopkg.in/yaml.v3"
 )
 
@@ -36,14 +37,14 @@ func (d Diff) Print() {
 		if err != nil {
 			panic(err)
 		}
-		color.Red("--- %s: %s", k, strings.TrimSpace(string(out)))
+		color.Red("--- %s:\n%s", k, strings.TrimSpace(string(out)))
 	}
 	green := func(k, v interface{}) {
 		out, err := yaml.Marshal(v)
 		if err != nil {
 			panic(err)
 		}
-		color.Green("+++ %s: %s", k, strings.TrimSpace(string(out)))
+		color.Green("+++ %s:\n%s", k, strings.TrimSpace(string(out)))
 	}
 
 	for _, k := range d.ModifiedKeys {
@@ -71,14 +72,17 @@ func calculateDiffHelper(path string, oldMap Map, newMap Map) Diff {
 		[]string{},
 	}
 
+	constructKeyPath := func(path, key string) string {
+		if path == "" {
+			return key
+		} else {
+			return path + "/" + key
+		}
+	}
+
 	// find added or modified fields
 	for key, newValue := range newMap {
-		var keyPath string
-		if path == "" {
-			keyPath = key
-		} else {
-			keyPath = path + "/" + key
-		}
+		keyPath := constructKeyPath(path, key)
 
 		oldValue, ok := oldMap[key]
 		if !ok {
@@ -116,10 +120,26 @@ func calculateDiffHelper(path string, oldMap Map, newMap Map) Diff {
 
 	// find removed fields
 	for key, oldValue := range oldMap {
+		keyPath := constructKeyPath(path, key)
 		if _, ok := newMap[key]; !ok {
-			diff.removed[key] = oldValue
+			diff.removed[keyPath] = oldValue
 		}
 	}
 
 	return diff
+}
+
+func (d Diff) Apply() {
+	for k := range d.removed {
+		_, err := kv.DeleteTree(k, nil)
+		if err != nil {
+			panic(err)
+		}
+	}
+	for k, v := range d.added {
+		_, err := kv.Put(&api.KVPair{Key: k, Value: []byte(v.(string)), Flags: 42}, nil)
+		if err != nil {
+			panic(err)
+		}
+	}
 }

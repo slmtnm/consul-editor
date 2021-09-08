@@ -44,10 +44,17 @@ var rootCmd = &cobra.Command{
 		fmt.Println("Your changes:")
 		diff.Print()
 
-		fmt.Print("Confirm changes? [y/n] ")
 		var answer string
 		for answer != "y" && answer != "n" {
+			fmt.Print("Confirm changes? [y/n] ")
 			fmt.Scan(&answer)
+		}
+
+		if answer == "y" {
+			diff.Apply()
+			fmt.Println("Changes applied!")
+		} else {
+			fmt.Println("No changes made")
 		}
 	},
 }
