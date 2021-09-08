@@ -8,14 +8,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type Map map[string]interface{}
-
 type Diff struct {
-	added, removed Map
-	ModifiedKeys   []string
+	added, removed map[string]string
 }
 
-func CalculateDiff(oldMap Map, newMap Map) Diff {
+func CalculateDiff(oldMap, newMap map[string]interface{}) Diff {
 	return calculateDiffHelper("", oldMap, newMap)
 }
 
@@ -26,7 +23,6 @@ func (d1 *Diff) Append(d2 Diff) {
 	for sk, sv := range d2.removed {
 		d1.removed[sk] = sv
 	}
-	d1.ModifiedKeys = append(d1.ModifiedKeys, d2.ModifiedKeys...)
 }
 
 func (d Diff) Print() {
@@ -37,20 +33,14 @@ func (d Diff) Print() {
 		if err != nil {
 			panic(err)
 		}
-		color.Red("--- %s:\n%s", k, strings.TrimSpace(string(out)))
+		color.Red("--- %s: %s", k, strings.TrimSpace(string(out)))
 	}
 	green := func(k, v interface{}) {
 		out, err := yaml.Marshal(v)
 		if err != nil {
 			panic(err)
 		}
-		color.Green("+++ %s:\n%s", k, strings.TrimSpace(string(out)))
-	}
-
-	for _, k := range d.ModifiedKeys {
-		red(k, d.removed[k])
-		green(k, d.added[k])
-		marked[k] = true
+		color.Green("+++ %s: %s", k, strings.TrimSpace(string(out)))
 	}
 
 	for k, v := range d.removed {
@@ -65,11 +55,10 @@ func (d Diff) Print() {
 	}
 }
 
-func calculateDiffHelper(path string, oldMap Map, newMap Map) Diff {
+func calculateDiffHelper(path string, oldMap, newMap map[string]interface{}) Diff {
 	diff := Diff{
-		make(Map),
-		make(Map),
-		[]string{},
+		make(map[string]string),
+		make(map[string]string),
 	}
 
 	constructKeyPath := func(path, key string) string {
@@ -83,38 +72,62 @@ func calculateDiffHelper(path string, oldMap Map, newMap Map) Diff {
 	// find added or modified fields
 	for key, newValue := range newMap {
 		keyPath := constructKeyPath(path, key)
-
 		oldValue, ok := oldMap[key]
+
 		if !ok {
-			diff.added[keyPath] = newValue
+			switch actualNewValue := newValue.(type) {
+			case string:
+				diff.added[keyPath] = actualNewValue
+			case map[string]interface{}:
+				diff.Append(calculateDiffHelper(
+					keyPath,
+					map[string]interface{}{},
+					actualNewValue,
+				))
+			default:
+				panic("trash")
+			}
 			continue
 		}
 
-		// compare oldValue and newValue
-		if oldString, ok := oldValue.(string); ok {
-			if newString, ok := newValue.(string); ok { // old value and new value are strings
-				if oldString != newString {
-					diff.removed[keyPath] = oldString
-					diff.added[keyPath] = newString
-					diff.ModifiedKeys = append(diff.ModifiedKeys, keyPath)
+		switch actualOldValue := oldValue.(type) {
+		case string:
+			switch actualNewValue := newValue.(type) {
+			case string: // old value and new value are strings
+				if actualOldValue != actualNewValue {
+					diff.removed[keyPath] = actualOldValue
+					diff.added[keyPath] = actualNewValue
 				}
-			} else { // old value is string but new value is map
-				diff.removed[keyPath] = oldString
-				diff.added[keyPath] = newValue
-				diff.ModifiedKeys = append(diff.ModifiedKeys, keyPath)
-			}
-		} else {
-			if newString, ok := newValue.(string); ok { // old value is map, but new value is string
-				diff.removed[keyPath] = oldValue
-				diff.added[keyPath] = newString
-				diff.ModifiedKeys = append(diff.ModifiedKeys, keyPath)
-			} else { // old value and new values are both maps, compare them recursive
+			case map[string]interface{}: // old value is string but new value is map
+				diff.removed[keyPath] = actualOldValue
 				diff.Append(calculateDiffHelper(
 					keyPath,
-					oldValue.(map[string]interface{}),
-					newValue.(map[string]interface{}),
+					map[string]interface{}{},
+					actualNewValue,
 				))
+			default:
+				panic("trash")
 			}
+		case map[string]interface{}:
+			switch actualNewValue := newValue.(type) {
+			case string: // old value is map, but new value is string
+				diff.Append(calculateDiffHelper(
+					keyPath,
+					actualOldValue,
+					map[string]interface{}{},
+				))
+				diff.added[keyPath] = actualNewValue
+			case map[string]interface{}: // old value and new value are maps
+				diff.Append(calculateDiffHelper(
+					keyPath,
+					actualOldValue,
+					actualNewValue,
+				))
+			default:
+				panic("trash")
+			}
+		default:
+			panic("")
 		}
 	}
 
@@ -122,7 +135,18 @@ func calculateDiffHelper(path string, oldMap Map, newMap Map) Diff {
 	for key, oldValue := range oldMap {
 		keyPath := constructKeyPath(path, key)
 		if _, ok := newMap[key]; !ok {
-			diff.removed[keyPath] = oldValue
+			switch actualOldValue := oldValue.(type) {
+			case string:
+				diff.removed[keyPath] = actualOldValue
+			case map[string]interface{}:
+				diff.Append(calculateDiffHelper(
+					keyPath,
+					actualOldValue,
+					map[string]interface{}{},
+				))
+			default:
+				panic("")
+			}
 		}
 	}
 
@@ -137,7 +161,7 @@ func (d Diff) Apply() {
 		}
 	}
 	for k, v := range d.added {
-		_, err := kv.Put(&api.KVPair{Key: k, Value: []byte(v.(string)), Flags: 42}, nil)
+		_, err := kv.Put(&api.KVPair{Key: k, Value: []byte(v), Flags: 42}, nil)
 		if err != nil {
 			panic(err)
 		}

@@ -40,3 +40,11 @@ root:
 
 After modifying and saving file all changes will be uploaded in consul. It
 means you can create/update/delete keys and corresponding values.
+
+## Testing checklist
+
+- [x] Ability to change text to text
+- [x] Ability to remove key completely
+- [x] Ability to remove folder completely
+- [x] Ability to change text key to folder key
+- [x] Ability to change folder key to text key
