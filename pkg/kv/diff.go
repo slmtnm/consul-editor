@@ -155,18 +155,45 @@ func calculateDiffHelper(path string, oldMap, newMap map[string]interface{}) Dif
 }
 
 func (d Diff) Apply() {
+	errCh := make(chan error)
+	deleteCh := make(chan interface{}, len(d.removed))
+	addCh := make(chan interface{}, len(d.added))
+
 	for k := range d.removed {
-		_, err := kv.DeleteTree(k, nil)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Printf("Key %s deleted\n", k)
+		go func(k string) {
+			_, err := kv.DeleteTree(k, nil)
+			if err != nil {
+				errCh <- err
+			}
+			fmt.Printf("Key %s deleted\n", k)
+			deleteCh <- nil
+		}(k)
 	}
-	for k, v := range d.added {
-		_, err := kv.Put(&api.KVPair{Key: k, Value: []byte(v), Flags: 42}, nil)
-		if err != nil {
-			panic(err)
+	for i := 0; i < len(d.removed); i++ {
+		select {
+		case e := <-errCh:
+			panic(e)
+		case <-deleteCh:
+			continue
 		}
-		fmt.Printf("Key %s added\n", k)
+	}
+
+	for k, v := range d.added {
+		go func(k string, v string) {
+			_, err := kv.Put(&api.KVPair{Key: k, Value: []byte(v), Flags: 42}, nil)
+			if err != nil {
+				errCh <- err
+			}
+			fmt.Printf("Key %s added\n", k)
+			addCh <- nil
+		}(k, v)
+	}
+	for i := 0; i < len(d.added); i++ {
+		select {
+		case e := <-errCh:
+			panic(e)
+		case <-addCh:
+			continue
+		}
 	}
 }
