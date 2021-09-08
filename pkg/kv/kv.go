@@ -1,6 +1,8 @@
-package pkg
+package kv
 
 import (
+	"fmt"
+	"os"
 	"strings"
 
 	"github.com/hashicorp/consul/api"
@@ -11,7 +13,19 @@ type KV struct {
 	Value string
 }
 
-func KeysToMap(pairs api.KVPairs) map[string]interface{} {
+var kv *api.KV
+
+func init() {
+	client, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	kv = client.KV()
+}
+
+func keysToMap(pairs api.KVPairs) map[string]interface{} {
 	m := make(map[string]interface{})
 	for _, pair := range pairs {
 		path := strings.Split(pair.Key, "/")
@@ -38,6 +52,16 @@ func KeysToMap(pairs api.KVPairs) map[string]interface{} {
 	return m
 }
 
-func MapToKeys(data map[string]interface{}) ([]*KV, error) {
-	return traverse("", data)
+func GetKeys(path string) (map[string]interface{}, error) {
+	keys, _, err := kv.List(path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(keys) == 0 {
+		return nil, fmt.Errorf("key '%s' not found", path)
+	}
+
+	keysMap := keysToMap(keys)
+	return keysMap, nil
 }
