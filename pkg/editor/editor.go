@@ -8,6 +8,12 @@ import (
 	"os/exec"
 )
 
+const header = `# This is Consul KV converted to YAML format.
+# Feel free to edit it, then save and close the file to
+# see the difference you impact and eventually apply those changes.
+
+`
+
 var editorExecutable string
 
 func init() {
@@ -25,12 +31,17 @@ func Edit(data []byte) ([]byte, error) {
 	defer file.Close()
 	defer os.Remove(file.Name())
 
+	_, err = file.Write([]byte(header))
+	if err != nil {
+		return nil, err
+	}
+
 	_, err = file.Write(data)
 	if err != nil {
 		return nil, err
 	}
 
-	oldHash := sha256.Sum256(data)
+	oldHash := sha256.Sum256(append([]byte(header), data...))
 
 	cmd := exec.Command(editorExecutable, file.Name())
 	cmd.Stderr = os.Stderr
