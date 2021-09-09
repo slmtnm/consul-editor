@@ -1,7 +1,6 @@
 package editor
 
 import (
-	"crypto/sha256"
 	"io"
 	"io/ioutil"
 	"os"
@@ -41,8 +40,6 @@ func Edit(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	oldHash := sha256.Sum256(append([]byte(header), data...))
-
 	cmd := exec.Command(editorExecutable, file.Name())
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
@@ -55,10 +52,6 @@ func Edit(data []byte) ([]byte, error) {
 	newData, err := ioutil.ReadAll(file)
 	if err != nil {
 		return nil, err
-	}
-
-	if oldHash == sha256.Sum256(newData) {
-		newData = nil
 	}
 
 	return newData, nil

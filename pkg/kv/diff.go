@@ -11,7 +11,7 @@ import (
 )
 
 type Diff struct {
-	added, removed map[string]string
+	Added, Removed map[string]string
 }
 
 func CalculateDiff(oldMap, newMap map[string]interface{}) Diff {
@@ -19,38 +19,41 @@ func CalculateDiff(oldMap, newMap map[string]interface{}) Diff {
 }
 
 func (d1 *Diff) Append(d2 Diff) {
-	for sk, sv := range d2.added {
-		d1.added[sk] = sv
+	for sk, sv := range d2.Added {
+		d1.Added[sk] = sv
 	}
-	for sk, sv := range d2.removed {
-		d1.removed[sk] = sv
+	for sk, sv := range d2.Removed {
+		d1.Removed[sk] = sv
 	}
 }
 
-func (d Diff) Print() {
+func (d Diff) Print(prefix string) {
 	marked := make(map[string]bool)
+	if prefix != "" {
+		prefix = prefix + "/"
+	}
 
-	red := func(k, v interface{}) {
+	red := func(k string, v interface{}) {
 		out, err := yaml.Marshal(v)
 		if err != nil {
 			panic(err)
 		}
-		color.Red("--- %s: %s", k, strings.TrimSpace(string(out)))
+		color.Red("--- %s: %s", prefix+k, strings.TrimSpace(string(out)))
 	}
-	green := func(k, v interface{}) {
+	green := func(k string, v interface{}) {
 		out, err := yaml.Marshal(v)
 		if err != nil {
 			panic(err)
 		}
-		color.Green("+++ %s: %s", k, strings.TrimSpace(string(out)))
+		color.Green("+++ %s: %s", prefix+k, strings.TrimSpace(string(out)))
 	}
 
-	for k, v := range d.removed {
+	for k, v := range d.Removed {
 		if _, ok := marked[k]; !ok {
 			red(k, v)
 		}
 	}
-	for k, v := range d.added {
+	for k, v := range d.Added {
 		if _, ok := marked[k]; !ok {
 			green(k, v)
 		}
@@ -71,7 +74,7 @@ func calculateDiffHelper(path string, oldMap, newMap map[string]interface{}) Dif
 		}
 	}
 
-	// find added or modified fields
+	// find Added or modified fields
 	for key, newValue := range newMap {
 		keyPath := constructKeyPath(path, key)
 		oldValue, ok := oldMap[key]
@@ -79,7 +82,7 @@ func calculateDiffHelper(path string, oldMap, newMap map[string]interface{}) Dif
 		if !ok {
 			switch actualNewValue := newValue.(type) {
 			case string:
-				diff.added[keyPath] = actualNewValue
+				diff.Added[keyPath] = actualNewValue
 			case map[string]interface{}:
 				diff.Append(calculateDiffHelper(
 					keyPath,
@@ -97,11 +100,11 @@ func calculateDiffHelper(path string, oldMap, newMap map[string]interface{}) Dif
 			switch actualNewValue := newValue.(type) {
 			case string: // old value and new value are strings
 				if actualOldValue != actualNewValue {
-					diff.removed[keyPath] = actualOldValue
-					diff.added[keyPath] = actualNewValue
+					diff.Removed[keyPath] = actualOldValue
+					diff.Added[keyPath] = actualNewValue
 				}
 			case map[string]interface{}: // old value is string but new value is map
-				diff.removed[keyPath] = actualOldValue
+				diff.Removed[keyPath] = actualOldValue
 				diff.Append(calculateDiffHelper(
 					keyPath,
 					map[string]interface{}{},
@@ -118,7 +121,7 @@ func calculateDiffHelper(path string, oldMap, newMap map[string]interface{}) Dif
 					actualOldValue,
 					map[string]interface{}{},
 				))
-				diff.added[keyPath] = actualNewValue
+				diff.Added[keyPath] = actualNewValue
 			case map[string]interface{}: // old value and new value are maps
 				diff.Append(calculateDiffHelper(
 					keyPath,
@@ -133,19 +136,23 @@ func calculateDiffHelper(path string, oldMap, newMap map[string]interface{}) Dif
 		}
 	}
 
-	// find removed fields
+	// find Removed fields
 	for key, oldValue := range oldMap {
 		keyPath := constructKeyPath(path, key)
 		if _, ok := newMap[key]; !ok {
 			switch actualOldValue := oldValue.(type) {
 			case string:
-				diff.removed[keyPath] = actualOldValue
+				diff.Removed[keyPath] = actualOldValue
 			case map[string]interface{}:
-				diff.Append(calculateDiffHelper(
-					keyPath,
-					actualOldValue,
-					map[string]interface{}{},
-				))
+				if len(actualOldValue) == 0 { // empty folder
+					diff.Removed[keyPath+"/"] = "(folder)"
+				} else {
+					diff.Append(calculateDiffHelper(
+						keyPath,
+						actualOldValue,
+						map[string]interface{}{},
+					))
+				}
 			default:
 				panic("")
 			}
@@ -155,27 +162,33 @@ func calculateDiffHelper(path string, oldMap, newMap map[string]interface{}) Dif
 	return diff
 }
 
-func (d Diff) Apply() {
+func (d Diff) Apply(prefix string) {
+	if prefix != "" {
+		prefix = prefix + "/"
+	}
+
 	var wg sync.WaitGroup
-	for k := range d.removed {
+	for k := range d.Removed {
+		k = prefix + k
 		wg.Add(1)
 		go func(k string) {
 			if _, err := kv.DeleteTree(k, nil); err != nil {
 				panic(err)
 			}
-			fmt.Printf("Key %s deleted\n", k)
+			fmt.Printf("Key %s deleted\n", color.YellowString(k))
 			wg.Done()
 		}(k)
 	}
 	wg.Wait()
 
-	for k, v := range d.added {
+	for k, v := range d.Added {
+		k = prefix + k
 		wg.Add(1)
 		go func(k string, v string) {
 			if _, err := kv.Put(&api.KVPair{Key: k, Value: []byte(v), Flags: 42}, nil); err != nil {
 				panic(err)
 			}
-			fmt.Printf("Key %s added\n", k)
+			fmt.Printf("Key %s added\n", color.YellowString(k))
 			wg.Done()
 		}(k, v)
 	}

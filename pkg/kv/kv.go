@@ -58,10 +58,6 @@ func GetKeys(path string) (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	if len(keys) == 0 {
-		return nil, fmt.Errorf("key '%s' not found", path)
-	}
-
 	keysMap := keysToMap(keys)
 	return keysMap, nil
 }
