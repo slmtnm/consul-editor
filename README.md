@@ -19,6 +19,8 @@ Application is configured via standard consul environment variables:
 * **CONSUL_HTTP_ADDR** - HTTP address of consul host (default "localhost:9200")
 * **CONSUL_HTTP_TOKEN** - ACL Token
 
+See full list of them on https://www.consul.io/commands#environment-variables.
+
 ## Example
 Assume having following folder structure in Consul KV:
 ```
