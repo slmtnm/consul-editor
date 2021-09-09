@@ -7,7 +7,7 @@ more convenient with this utility than same done via UI.
 ## Installation
 To compile and install consul-editor, run:
 ```console
-  $ go install github.com/slmtnm/consul-editor@latest
+  $ go install github.com/slmtnm/consul-editor@0.2.0
 ```
 
 To download static binary, go to [Releases](https://github.com/slmtnm/consul-editor/releases) page.
