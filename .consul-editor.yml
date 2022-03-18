@@ -1,0 +1,9 @@
+contexts:
+  # dev consul doesnt require ACL token
+  - name: dev
+    address: localhost:8500
+  - name: prod
+    address: prod-consul:8500
+    token: some-token
+
+current-context: dev

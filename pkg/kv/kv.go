@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/consul/api"
+	"github.com/slmtnm/consul-editor/pkg/config"
 )
 
 type KV struct {
@@ -16,7 +17,13 @@ type KV struct {
 var kv *api.KV
 
 func init() {
-	client, err := api.NewClient(api.DefaultConfig())
+	currentContext := config.New().CurrentContext()
+
+	client, err := api.NewClient(&api.Config{
+		Address: currentContext.Address,
+		Token: currentContext.Token,
+	})
+
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

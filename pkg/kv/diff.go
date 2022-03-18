@@ -2,6 +2,7 @@ package kv
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 
@@ -38,14 +39,14 @@ func (d Diff) Print(prefix string) {
 		if err != nil {
 			panic(err)
 		}
-		color.Red("--- %s: %s", prefix+k, strings.TrimSpace(string(out)))
+		color.Red("- %s: %s", prefix+k, strings.TrimSpace(string(out)))
 	}
 	green := func(k string, v interface{}) {
 		out, err := yaml.Marshal(v)
 		if err != nil {
 			panic(err)
 		}
-		color.Green("+++ %s: %s", prefix+k, strings.TrimSpace(string(out)))
+		color.Green("+ %s: %s", prefix+k, strings.TrimSpace(string(out)))
 	}
 
 	for k, v := range d.Removed {
@@ -111,7 +112,7 @@ func calculateDiffHelper(path string, oldMap, newMap map[string]interface{}) Dif
 					actualNewValue,
 				))
 			default:
-				panic("trash")
+				panic(fmt.Sprintf("Unsupported type of key %v: %v\n", keyPath, reflect.TypeOf(newValue)))
 			}
 		case map[string]interface{}:
 			switch actualNewValue := newValue.(type) {
@@ -129,10 +130,8 @@ func calculateDiffHelper(path string, oldMap, newMap map[string]interface{}) Dif
 					actualNewValue,
 				))
 			default:
-				panic("trash")
+				panic(fmt.Sprintf("Unsupported type of key %v: %v\n", keyPath, reflect.TypeOf(newValue)))
 			}
-		default:
-			panic("")
 		}
 	}
 
