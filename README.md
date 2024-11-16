@@ -1,13 +1,18 @@
-# consul-editor
+<p align="center">
+<h1>consul-editor</h1>
+<em>Make editing deep KV trees in Consul more convenient with this utility.</em>
+</p>
 
-Utility for editing Consul KV storage via local editor. All folder 
-hierachy is converted into YAML format, so editing deep KV trees is made 
-more convenient with this utility than same done via UI.
+## What is it?
+Utility for editing Consul KV storage via local editor. All folder
+hierachy is converted into YAML-formatted tree, and then your $EDITOR (most possible `vim`, `nano`, `helix`, etc.) of choice
+is executed, providing you possibility to make any changes to that KV tree. After closing editor all changes made are pushed
+towards consul server.
 
 ## Installation
 To compile and install consul-editor, run:
 ```console
-  $ go get github.com/slmtnm/consul-editor@0.2.0
+  $ go install github.com/slmtnm/consul-editor@latest
 ```
 
 To download static binary, go to [Releases](https://github.com/slmtnm/consul-editor/releases) page.
@@ -30,7 +35,7 @@ root/
     c/c.json
 ```
 
-After running `consul-editor /root` your local editor (specified by 
+After running `consul-editor /root` your local editor (specified by
 EDITOR environment variable) will be opened with this content:
 ```yaml
 root:
